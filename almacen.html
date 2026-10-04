@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Almacén de Víctor</title>
+<style>
+  :root{
+    --paper: #F2EEDD;
+    --card: #FBF9F1;
+    --ink: #2A2620;
+    --ink-soft: #6B6558;
+    --line: #DBD4BC;
+    --green: #45703F;
+    --green-bg: #E4EBDD;
+    --mustard: #B8860B;
+    --mustard-bg: #F1E8CE;
+    --brick: #A13F2A;
+    --brick-bg: #F1DED6;
+    --slate: #4C6B78;
+    --slate-bg: #DEE7E9;
+    --lavanda: #6E5A8E;
+    --lavanda-bg: #E4DEEC;
+    --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .app{
+    max-width:480px;
+    margin:0 auto;
+    padding:20px 16px 60px;
+  }
+  .masthead{
+    text-align:left;
+    padding-bottom:14px;
+    border-bottom:3px double var(--ink);
+    margin-bottom:18px;
+  }
+  .masthead h1{
+    font-family:var(--serif);
+    font-size:28px;
+    margin:0 0 2px;
+    letter-spacing:0.2px;
+  }
+  .masthead p{
+    margin:0;
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+
+  .conn-badge{
+    display:inline-block;
+    font-size:11px;
+    padding:2px 8px;
+    border-radius:10px;
+    margin-top:6px;
+    font-family:var(--mono);
+  }
+  .conn-badge.ok{ background:var(--green-bg); color:var(--green); }
+  .conn-badge.err{ background:var(--brick-bg); color:var(--brick); }
+  .conn-badge.loading{ background:var(--slate-bg); color:var(--slate); }
+
+  .budget-box{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:14px 16px;
+    margin-bottom:20px;
+  }
+  .budget-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .budget-row .label{
+    font-size:13px;
+    color:var(--ink-soft);
+  }
+  .budget-row .amounts{
+    font-family:var(--mono);
+    font-size:15px;
+  }
+  .budget-row .amounts .spent{
+    font-weight:600;
+  }
+  .bar-track{
+    height:8px;
+    background:var(--line);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .bar-fill{
+    height:100%;
+    background:var(--green);
+    transition:width 0.4s ease;
+  }
+  .bar-fill.over{ background:var(--brick); }
+  .budget-edit{
+    margin-top:10px;
+    font-size:12px;
+    color:var(--ink-soft);
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .budget-edit input{
+    width:70px;
+    font-family:var(--mono);
+    font-size:12px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:3px 5px;
+    background:white;
+  }
+  .budget-edit button{
+    border:none;
+    background:none;
+    color:var(--slate);
+    font-size:12px;
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+
+  .category{
+    margin-bottom:16px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    overflow:hidden;
+    background:var(--card);
+  }
+  .cat-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:9px 14px;
+    font-family:var(--serif);
+    font-size:15px;
+    font-weight:bold;
+  }
+  .cat-head .count{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:normal;
+    opacity:0.75;
+  }
+  .cat-limpieza .cat-head{ background:var(--slate-bg); color:var(--slate); }
+  .cat-almacen .cat-head{ background:var(--mustard-bg); color:var(--mustard); }
+  .cat-verduras .cat-head{ background:var(--green-bg); color:var(--green); }
+  .cat-carniceria .cat-head{ background:var(--brick-bg); color:var(--brick); }
+  .cat-higiene .cat-head{ background:var(--lavanda-bg); color:var(--lavanda); }
+
+  .item{
+    display:flex;
+    align-items:center;
+    padding:10px 14px;
+    border-top:1px solid var(--line);
+    gap:10px;
+  }
+  .item.checked{ opacity:0.55; }
+  .checkbox{
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    border:2px solid var(--ink-soft);
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    background:white;
+  }
+  .checkbox.on{
+    background:var(--ink);
+    border-color:var(--ink);
+    color:white;
+    font-size:12px;
+  }
+  .item-name{
+    flex:1;
+    font-size:14.5px;
+    line-height:1.3;
+  }
+  .item.checked .item-name{ text-decoration:line-through; }
+  .item-note{
+    display:block;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    font-style:italic;
+  }
+  .price-input{
+    width:72px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    text-align:right;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:5px 6px;
+    background:white;
+  }
+  .place-input{
+    width:76px;
+    font-family:var(--sans);
+    font-size:12px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:5px 6px;
+    background:white;
+  }
+  .item-fields{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    align-items:flex-end;
+  }
+  .ref-price{
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  .del-btn{
+    border:none;
+    background:none;
+    color:var(--ink-soft);
+    font-size:15px;
+    cursor:pointer;
+    padding:2px 4px;
+    line-height:1;
+  }
+
+  .add-row{
+    padding:12px 14px;
+    display:flex;
+    gap:8px;
+    border-top:1px solid var(--line);
+    background:var(--paper);
+  }
+  .add-row input, .add-row select{
+    font-family:var(--sans);
+    font-size:13.5px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:8px 8px;
+    background:white;
+  }
+  .add-row .add-name{ flex:1; min-width:0; }
+  .add-row .add-cat{ width:96px; }
+  .add-row button{
+    border:none;
+    background:var(--ink);
+    color:var(--paper);
+    border-radius:3px;
+    padding:0 14px;
+    font-size:14px;
+    cursor:pointer;
+  }
+
+  .week-actions{
+    display:flex;
+    justify-content:center;
+    margin:22px 0 26px;
+  }
+  .week-actions button{
+    border:1px solid var(--ink);
+    background:none;
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:14px;
+    padding:9px 20px;
+    border-radius:3px;
+    cursor:pointer;
+  }
+
+  .history{
+    border-top:3px double var(--ink);
+    padding-top:14px;
+  }
+  .history h2{
+    font-family:var(--serif);
+    font-size:17px;
+    margin:0 0 10px;
+  }
+  .history-row{
+    display:flex;
+    justify-content:space-between;
+    padding:8px 2px;
+    border-bottom:1px solid var(--line);
+    font-size:13.5px;
+  }
+  .history-row .amounts{ font-family:var(--mono); }
+  .history-row .amounts.over{ color:var(--brick); }
+  .empty-hist{
+    color:var(--ink-soft);
+    font-size:13px;
+    font-style:italic;
+  }
+
+  .report-toggle{
+    display:block;
+    width:100%;
+    margin:20px 0 0;
+    border:1px solid var(--line);
+    background:var(--card);
+    color:var(--ink);
+    font-family:var(--serif);
+    font-size:14px;
+    padding:10px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .report-panel{
+    display:none;
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    padding:12px 14px 6px;
+    background:var(--card);
+  }
+  .report-panel.open{ display:block; }
+  .report-filters{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .report-filters select, .report-filters input{
+    font-family:var(--sans);
+    font-size:12.5px;
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:6px 7px;
+    background:white;
+    flex:1;
+    min-width:0;
+  }
+  .report-total{
+    font-family:var(--mono);
+    font-size:13px;
+    margin-bottom:8px;
+    color:var(--ink-soft);
+  }
+  .report-row{
+    display:flex;
+    gap:8px;
+    align-items:baseline;
+    padding:7px 0;
+    border-top:1px solid var(--line);
+    font-size:12.5px;
+  }
+  .report-row .r-date{
+    font-family:var(--mono);
+    color:var(--ink-soft);
+    width:62px;
+    flex-shrink:0;
+  }
+  .report-row .r-name{ flex:1; }
+  .report-row .r-place{
+    color:var(--ink-soft);
+    font-style:italic;
+    width:72px;
+    flex-shrink:0;
+    text-align:right;
+  }
+  .report-row .r-price{
+    font-family:var(--mono);
+    width:64px;
+    flex-shrink:0;
+    text-align:right;
+  }
+
+  .recipe-panel{
+    display:none;
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 4px 4px;
+    padding:4px 14px 10px;
+    background:var(--card);
+  }
+  .recipe-panel.open{ display:block; }
+  .recipe-card{
+    padding:14px 0;
+    border-top:1px solid var(--line);
+  }
+  .recipe-card:first-child{ border-top:none; }
+  .recipe-card h3{
+    font-family:var(--serif);
+    font-size:16px;
+    margin:0 0 4px;
+  }
+  .recipe-card .recipe-desc{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin:0 0 10px;
+    font-style:italic;
+  }
+  .recipe-ingredients{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px;
+    margin-bottom:10px;
+  }
+  .ing-chip{
+    font-size:12px;
+    padding:4px 9px;
+    border-radius:12px;
+    border:1px solid var(--line);
+    background:var(--paper);
+  }
+  .ing-chip.got{
+    background:var(--green-bg);
+    border-color:var(--green);
+    color:var(--green);
+  }
+  .recipe-steps{
+    margin:0;
+    padding-left:18px;
+    font-size:13px;
+    line-height:1.5;
+  }
+  .recipe-steps li{ margin-bottom:5px; }
+
+  .toast{
+    position:fixed;
+    bottom:18px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--ink);
+    color:var(--paper);
+    padding:9px 16px;
+    border-radius:4px;
+    font-size:13px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.3s ease;
+    max-width:90%;
+    text-align:center;
+  }
+  .toast.show{ opacity:1; }
+  .toast.err{ background:var(--brick); }
+
+  .loading-screen{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-soft);
+    font-family:var(--serif);
+    font-size:15px;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="masthead">
+    <h1>El Almacén de Víctor</h1>
+    <p id="week-label">Semana del —</p>
+    <span class="conn-badge loading" id="conn-badge">conectando…</span>
+  </div>
+
+  <div id="main-content" style="display:none;">
+    <div class="budget-box">
+      <div class="budget-row">
+        <span class="label">Gastado esta semana</span>
+        <span class="amounts"><span class="spent" id="spent-amount">$0</span> / <span id="budget-amount">$3.000</span></span>
+      </div>
+      <div class="bar-track"><div class="bar-fill" id="bar-fill" style="width:0%"></div></div>
+      <div class="budget-row" style="margin-top:8px; margin-bottom:0;">
+        <span class="label">Disponible</span>
+        <span class="amounts" id="available-amount" style="font-weight:600;">$3.000</span>
+      </div>
+      <div class="budget-edit">
+        <span>Presupuesto:</span>
+        <input type="number" id="budget-input" value="3000">
+        <button onclick="updateBudget()">guardar</button>
+      </div>
+    </div>
+
+    <div id="categories"></div>
+
+    <div class="week-actions">
+      <button onclick="closeWeek()">Cerrar semana y empezar otra</button>
+    </div>
+
+    <div class="history">
+      <h2>Semanas anteriores</h2>
+      <div id="history-list"><p class="empty-hist">Todavía no cerraste ninguna semana.</p></div>
+    </div>
+
+    <button class="report-toggle" onclick="toggleReport()">📋 Reporte de compras</button>
+    <div class="report-panel" id="report-panel">
+      <div class="report-filters">
+        <select id="filter-cat" onchange="renderReport()">
+          <option value="">Todas las categorías</option>
+        </select>
+        <select id="filter-place" onchange="renderReport()">
+          <option value="">Todos los lugares</option>
+        </select>
+      </div>
+      <input type="text" id="filter-search" placeholder="Buscar producto..." style="width:100%; margin-bottom:10px; font-family:var(--sans); font-size:12.5px; border:1px solid var(--line); border-radius:3px; padding:6px 7px;" oninput="renderReport()">
+      <div class="report-total" id="report-total"></div>
+      <div id="report-rows"></div>
+    </div>
+
+    <button class="report-toggle" onclick="toggleRecipes()">🍳 Recetas</button>
+    <div class="recipe-panel" id="recipe-panel"></div>
+  </div>
+
+  <div class="loading-screen" id="loading-screen">Cargando datos de Supabase…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// ====== Configuración de Supabase ======
+// Proyecto "Almacen". La anon key es pública por diseño (segura para usar
+// en el frontend) — el control de acceso real lo da Supabase, no esta clave.
+const SUPABASE_URL = 'https://sapaqpyvdzpsiqjnkppz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhcGFxcHl2ZHpwc2lxam5rcHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjY4MzksImV4cCI6MjEwNjYwMjgzOX0.DdGWm5ITnBQTtMplGoAeXQNSC7btO2Nga4LFT68-Ucg';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const CATS = [
+  {key:'limpieza', label:'Limpieza'},
+  {key:'almacen', label:'Almacén'},
+  {key:'verduras', label:'Frutas y Verduras'},
+  {key:'carniceria', label:'Carnicería'},
+  {key:'higiene', label:'Higiene Personal'}
+];
+
+const RECIPES = [
+  {
+    key: 'salad-bar',
+    title: '🥗 Salad Bar Casero',
+    desc: 'Meal prep de una hora que rinde para 2-3 cenas armadas.',
+    steps: [
+      'Cortar zucchini en rodajas de 0,5 cm.',
+      'Cortar la berenjena, salarla 10 minutos antes y secarla con papel para que no quede amarga ni aguachenta.',
+      'Cortar la calabaza en cubos de 2 cm (es la que más tarda en cocinarse).',
+      'Condimentar los tres con aceite, sal y pimienta.',
+      'Freidora de aire a 190°C: entra primero la calabaza 15 minutos; a mitad de cocción sumar el zucchini y la berenjena por 10 minutos más.',
+      'Hervir la suprema de pollo congelada (no queda aguachenta como al horno) y desmecharla o cortarla en cubitos.',
+      'Rallar la remolacha cruda.',
+      'Armar cada noche combinando distinto: vegetales asados + legumbres (garbanzos o lentejas) + pollo + base fresca (lechuga, rúcula, tomate cherry).',
+      'Se conserva 4-5 días en la heladera en recipiente hermético; consumir primero el zucchini y la berenjena, que se ablandan más rápido.'
+    ]
+  },
+  {
+    key: 'pasta-carne',
+    title: '🍝 Pasta con Carne',
+    desc: 'Receta rápida de entre semana.',
+    steps: [
+      'Hervir la pasta.',
+      'Dorar la carne picada.',
+      'Agregar la pulpa de tomate y cocinar hasta espesar.',
+      'Mezclar con la pasta y servir con queso rallado por arriba.'
+    ]
+  }
+];
+
+let state = null;
+
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+// "DD/MM/YYYY" <-> "YYYY-MM-DD" (Postgres date). La UI sigue mostrando
+// fechas al estilo uruguayo; la base de datos guarda ISO.
+function isoToDMY(iso){
+  if(!iso) return null;
+  const [y,m,d] = iso.split('-');
+  return d + '/' + m + '/' + y;
+}
+function dmyToISO(dmy){
+  if(!dmy) return null;
+  const [d,m,y] = dmy.split('/');
+  return y + '-' + m.padStart(2,'0') + '-' + d.padStart(2,'0');
+}
+
+function setConnBadge(status, text){
+  const b = document.getElementById('conn-badge');
+  b.className = 'conn-badge ' + status;
+  b.textContent = text;
+}
+
+// ====== Carga inicial desde Supabase ======
+async function loadState(){
+  const [settingsRes, itemsRes, refsRes, historyRes, logRes] = await Promise.all([
+    supabase.from('settings').select('*').eq('id', 1).maybeSingle(),
+    supabase.from('items').select('*').order('created_at', {ascending:true}),
+    supabase.from('price_refs').select('*'),
+    supabase.from('week_history').select('*').order('closed_at', {ascending:true}),
+    supabase.from('purchase_log').select('*').order('purchase_date', {ascending:false})
+  ]);
+
+  const firstError = [settingsRes, itemsRes, refsRes, historyRes, logRes].find(r => r.error);
+  if(firstError) throw firstError.error;
+
+  const settings = settingsRes.data || {budget: 3000, week_start: todayISO()};
+
+  state = {
+    budget: Number(settings.budget),
+    weekStart: isoToDMY(settings.week_start),
+    weekStartISO: settings.week_start,
+    items: (itemsRes.data || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      category: r.category,
+      checked: r.checked,
+      price: r.price !== null && r.price !== undefined ? Number(r.price) : null,
+      boughtDate: isoToDMY(r.bought_date),
+      place: r.place,
+      note: r.note,
+      recipe: r.recipe
+    })),
+    priceRefs: {},
+    history: (historyRes.data || []).map(r => ({
+      weekStart: isoToDMY(r.week_start), spent: Number(r.spent), budget: Number(r.budget)
+    })),
+    purchaseLog: (logRes.data || []).map(r => ({
+      id: r.id, name: r.item_name, category: r.category,
+      price: r.price !== null ? Number(r.price) : null,
+      date: isoToDMY(r.purchase_date), place: r.place
+    }))
+  };
+  (refsRes.data || []).forEach(r => {
+    state.priceRefs[r.product_name] = {price: Number(r.price), unit: r.unit};
+  });
+}
+
+function showToast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), isErr ? 3200 : 1600);
+}
+
+function money(n){
+  if(n === null || n === undefined || isNaN(n)) return '';
+  return '$' + Number(n).toLocaleString('es-UY', {minimumFractionDigits: n % 1 !== 0 ? 2 : 0, maximumFractionDigits:2});
+}
+
+function computeSpent(){
+  return state.items.reduce((sum, it) => sum + (it.checked && it.price ? Number(it.price) : 0), 0);
+}
+
+// Registra (o actualiza) la entrada de historial para un ítem marcado como
+// comprado, guardándola también en Supabase.
+async function logPurchase(item){
+  if(!item.checked || !item.price) return;
+  const payload = {
+    item_name: item.name, category: item.category,
+    price: item.price, purchase_date: dmyToISO(item.boughtDate), place: item.place || null
+  };
+  let logEntry = state.purchaseLog.find(l => l.itemId === item.id);
+  // Usamos el id del ítem como referencia mientras está en la lista activa;
+  // como purchase_log tiene su propia PK, buscamos por itemId guardado aparte.
+  const idx = state.purchaseLog.findIndex(l => l.linkedItemId === item.id);
+  if(idx >= 0){
+    const row = state.purchaseLog[idx];
+    const {data, error} = await supabase.from('purchase_log').update(payload).eq('id', row.id).select().single();
+    if(error){ showToast('No se pudo actualizar el historial', true); return; }
+    state.purchaseLog[idx] = {id:data.id, name:data.item_name, category:data.category, price:Number(data.price), date:isoToDMY(data.purchase_date), place:data.place, linkedItemId:item.id};
+  } else {
+    const {data, error} = await supabase.from('purchase_log').insert(payload).select().single();
+    if(error){ showToast('No se pudo guardar en el historial', true); return; }
+    state.purchaseLog.unshift({id:data.id, name:data.item_name, category:data.category, price:Number(data.price), date:isoToDMY(data.purchase_date), place:data.place, linkedItemId:item.id});
+  }
+}
+
+async function removeFromLog(itemId){
+  const idx = state.purchaseLog.findIndex(l => l.linkedItemId === itemId);
+  if(idx < 0) return;
+  const row = state.purchaseLog[idx];
+  const {error} = await supabase.from('purchase_log').delete().eq('id', row.id);
+  if(error){ showToast('No se pudo borrar del historial', true); return; }
+  state.purchaseLog.splice(idx, 1);
+}
+
+function render(){
+  document.getElementById('week-label').textContent = 'Semana del ' + state.weekStart;
+  document.getElementById('budget-amount').textContent = money(state.budget);
+  document.getElementById('budget-input').value = state.budget;
+
+  const spent = computeSpent();
+  document.getElementById('spent-amount').textContent = money(spent);
+  const pct = Math.min(100, (spent / state.budget) * 100);
+  const fill = document.getElementById('bar-fill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('over', spent > state.budget);
+
+  const available = state.budget - spent;
+  const availEl = document.getElementById('available-amount');
+  availEl.textContent = money(available);
+  availEl.style.color = available < 0 ? 'var(--brick)' : 'var(--green)';
+
+  const catsDiv = document.getElementById('categories');
+  catsDiv.innerHTML = '';
+  CATS.forEach(cat => {
+    const items = state.items.filter(it => it.category === cat.key);
+    const boughtCount = items.filter(it=>it.checked).length;
+    const block = document.createElement('div');
+    block.className = 'category cat-' + cat.key;
+    block.innerHTML = `
+      <div class="cat-head">
+        <span>${cat.label}</span>
+        <span class="count">${boughtCount}/${items.length}</span>
+      </div>
+      ${items.map(it => itemRow(it)).join('')}
+      <div class="add-row">
+        <input class="add-name" type="text" placeholder="Agregar producto..." data-cat="${cat.key}">
+        <button onclick="addItemFromRow(this)">+</button>
+      </div>
+    `;
+    catsDiv.appendChild(block);
+  });
+
+  renderHistory();
+
+  const recipePanel = document.getElementById('recipe-panel');
+  if(recipePanel.classList.contains('open')) renderRecipes();
+}
+
+function itemRow(it){
+  const refKey = it.name.trim().toLowerCase();
+  const ref = state.priceRefs[refKey];
+  const refHtml = ref ? `<span class="ref-price">ref: ${money(ref.price)}/${ref.unit}</span>` : '';
+  return `
+    <div class="item ${it.checked ? 'checked':''}" data-id="${it.id}">
+      <div class="checkbox ${it.checked ? 'on':''}" onclick="toggleItem('${it.id}')">${it.checked ? '✓':''}</div>
+      <div class="item-name">${it.name}${it.note ? `<span class="item-note">${it.note}</span>` : ''}${it.checked && it.boughtDate ? `<span class="item-note">comprado ${it.boughtDate}</span>` : ''}</div>
+      ${it.checked
+        ? `<div class="item-fields">
+             <input class="price-input" type="number" placeholder="precio" value="${it.price ?? ''}" onchange="setPrice('${it.id}', this.value)">
+             <input class="place-input" type="text" placeholder="lugar" value="${it.place ?? ''}" onchange="setPlace('${it.id}', this.value)">
+           </div>`
+        : refHtml
+      }
+      <button class="del-btn" onclick="deleteItem('${it.id}')">×</button>
+    </div>
+  `;
+}
+
+function renderHistory(){
+  const hDiv = document.getElementById('history-list');
+  if(!state.history.length){
+    hDiv.innerHTML = '<p class="empty-hist">Todavía no cerraste ninguna semana.</p>';
+    return;
+  }
+  hDiv.innerHTML = state.history.slice().reverse().map(h => `
+    <div class="history-row">
+      <span>${h.weekStart}</span>
+      <span class="amounts ${h.spent > h.budget ? 'over':''}">${money(h.spent)} / ${money(h.budget)}</span>
+    </div>
+  `).join('');
+}
+
+async function toggleItem(id){
+  const it = state.items.find(i => i.id === id);
+  const wasChecked = it.checked;
+  it.checked = !it.checked;
+  if(!it.checked){
+    it.price = null;
+    it.boughtDate = null;
+    it.place = null;
+  } else {
+    it.boughtDate = todayISO().split('-').reverse().join('/');
+  }
+  render();
+  try{
+    const {error} = await supabase.from('items').update({
+      checked: it.checked,
+      price: it.checked ? it.price : null,
+      bought_date: it.checked ? dmyToISO(it.boughtDate) : null,
+      place: it.checked ? it.place : null
+    }).eq('id', id);
+    if(error) throw error;
+    if(!it.checked) await removeFromLog(id);
+  }catch(e){
+    it.checked = wasChecked;
+    showToast('No se pudo guardar el cambio', true);
+    render();
+  }
+}
+
+async function setPrice(id, val){
+  const it = state.items.find(i => i.id === id);
+  const num = parseFloat(val);
+  it.price = isNaN(num) ? null : num;
+  try{
+    const {error} = await supabase.from('items').update({price: it.price}).eq('id', id);
+    if(error) throw error;
+    await logPurchase(it);
+  }catch(e){
+    showToast('No se pudo guardar el precio', true);
+  }
+  render();
+}
+
+async function setPlace(id, val){
+  const it = state.items.find(i => i.id === id);
+  it.place = val.trim() || null;
+  try{
+    const {error} = await supabase.from('items').update({place: it.place}).eq('id', id);
+    if(error) throw error;
+    await logPurchase(it);
+  }catch(e){
+    showToast('No se pudo guardar el lugar', true);
+  }
+  render();
+}
+
+async function deleteItem(id){
+  try{
+    const {error} = await supabase.from('items').delete().eq('id', id);
+    if(error) throw error;
+    await removeFromLog(id);
+    state.items = state.items.filter(i => i.id !== id);
+    render();
+  }catch(e){
+    showToast('No se pudo borrar el producto', true);
+  }
+}
+
+async function addItemFromRow(btn){
+  const row = btn.previousElementSibling;
+  const name = row.value.trim();
+  const cat = row.dataset.cat;
+  if(!name) return;
+  try{
+    const {data, error} = await supabase.from('items').insert({name, category: cat, checked:false}).select().single();
+    if(error) throw error;
+    state.items.push({id:data.id, name:data.name, category:data.category, checked:false, price:null, boughtDate:null, place:null, note:null, recipe:null});
+    render();
+    showToast('Agregado a ' + CATS.find(c=>c.key===cat).label);
+  }catch(e){
+    showToast('No se pudo agregar el producto', true);
+  }
+}
+
+async function updateBudget(){
+  const val = parseFloat(document.getElementById('budget-input').value);
+  if(isNaN(val) || val <= 0) return;
+  try{
+    const {error} = await supabase.from('settings').update({budget: val}).eq('id', 1);
+    if(error) throw error;
+    state.budget = val;
+    render();
+    showToast('Presupuesto actualizado');
+  }catch(e){
+    showToast('No se pudo guardar el presupuesto', true);
+  }
+}
+
+async function closeWeek(){
+  const spent = computeSpent();
+  try{
+    // Actualiza precios de referencia con lo pagado esta semana.
+    const refUpserts = state.items
+      .filter(it => it.checked && it.price)
+      .map(it => ({product_name: it.name.trim().toLowerCase(), price: it.price, unit: state.priceRefs[it.name.trim().toLowerCase()]?.unit || 'un'}));
+    if(refUpserts.length){
+      const {error: refErr} = await supabase.from('price_refs').upsert(refUpserts, {onConflict:'product_name'});
+      if(refErr) throw refErr;
+      refUpserts.forEach(r => { state.priceRefs[r.product_name] = {price:r.price, unit:r.unit}; });
+    }
+
+    const {error: histErr} = await supabase.from('week_history').insert({
+      week_start: state.weekStartISO, spent, budget: state.budget
+    });
+    if(histErr) throw histErr;
+    state.history.push({weekStart: state.weekStart, spent, budget: state.budget});
+
+    const newWeekISO = todayISO();
+    const {error: setErr} = await supabase.from('settings').update({week_start: newWeekISO}).eq('id', 1);
+    if(setErr) throw setErr;
+    state.weekStart = isoToDMY(newWeekISO);
+    state.weekStartISO = newWeekISO;
+
+    const checkedIds = state.items.filter(it => it.checked).map(it => it.id);
+    if(checkedIds.length){
+      const {error: itemsErr} = await supabase.from('items')
+        .update({checked:false, price:null, bought_date:null, place:null})
+        .in('id', checkedIds);
+      if(itemsErr) throw itemsErr;
+    }
+    state.items.forEach(it => { it.checked = false; it.price = null; it.boughtDate = null; it.place = null; });
+
+    render();
+    showToast('Semana cerrada, arrancó una nueva');
+  }catch(e){
+    showToast('No se pudo cerrar la semana', true);
+  }
+}
+
+function toggleRecipes(){
+  const panel = document.getElementById('recipe-panel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')) renderRecipes();
+}
+
+function renderRecipes(){
+  const panel = document.getElementById('recipe-panel');
+  panel.innerHTML = RECIPES.map(r => {
+    const ingredients = state.items.filter(it => it.recipe === r.key);
+    const chips = ingredients.map(it =>
+      `<span class="ing-chip ${it.checked ? 'got':''}">${it.checked ? '✓ ':''}${it.name}</span>`
+    ).join('');
+    return `
+      <div class="recipe-card">
+        <h3>${r.title}</h3>
+        <p class="recipe-desc">${r.desc}</p>
+        <div class="recipe-ingredients">${chips || '<span class="recipe-desc">Sin ingredientes vinculados</span>'}</div>
+        <ol class="recipe-steps">${r.steps.map(s => `<li>${s}</li>`).join('')}</ol>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleReport(){
+  const panel = document.getElementById('report-panel');
+  panel.classList.toggle('open');
+  if(panel.classList.contains('open')){
+    populateReportFilters();
+    renderReport();
+  }
+}
+
+function populateReportFilters(){
+  const catSel = document.getElementById('filter-cat');
+  const placeSel = document.getElementById('filter-place');
+  const curCat = catSel.value;
+  const curPlace = placeSel.value;
+
+  catSel.innerHTML = '<option value="">Todas las categorías</option>' +
+    CATS.map(c => `<option value="${c.key}">${c.label}</option>`).join('');
+  catSel.value = curCat;
+
+  const places = [...new Set(state.purchaseLog.map(l => l.place).filter(Boolean))].sort();
+  placeSel.innerHTML = '<option value="">Todos los lugares</option>' +
+    places.map(p => `<option value="${p}">${p}</option>`).join('');
+  placeSel.value = curPlace;
+}
+
+function renderReport(){
+  const cat = document.getElementById('filter-cat').value;
+  const place = document.getElementById('filter-place').value;
+  const search = document.getElementById('filter-search').value.trim().toLowerCase();
+
+  let rows = state.purchaseLog.slice();
+  if(cat) rows = rows.filter(r => r.category === cat);
+  if(place) rows = rows.filter(r => r.place === place);
+  if(search) rows = rows.filter(r => r.name.toLowerCase().includes(search));
+
+  rows.sort((a,b) => {
+    const da = a.date ? a.date.split('/').reverse().join('') : '';
+    const db = b.date ? b.date.split('/').reverse().join('') : '';
+    return db.localeCompare(da);
+  });
+
+  const total = rows.reduce((s,r) => s + (Number(r.price) || 0), 0);
+  document.getElementById('report-total').textContent =
+    rows.length ? `${rows.length} compras · total ${money(total)}` : 'Sin compras registradas todavía';
+
+  document.getElementById('report-rows').innerHTML = rows.map(r => `
+    <div class="report-row">
+      <span class="r-date">${r.date || '—'}</span>
+      <span class="r-name">${r.name}</span>
+      <span class="r-place">${r.place || '—'}</span>
+      <span class="r-price">${money(r.price)}</span>
+    </div>
+  `).join('');
+}
+
+document.addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' && e.target.classList.contains('add-name')){
+    e.target.nextElementSibling.click();
+  }
+});
+
+(async function init(){
+  try{
+    await loadState();
+    // Vincula purchase_log con items activos por nombre+categoría+fecha,
+    // para poder editar/borrar la entrada de historial cuando se destilda
+    // un ítem sin tener que guardar un id explícito en la base.
+    state.items.filter(it => it.checked).forEach(it => {
+      const match = state.purchaseLog.find(l =>
+        !l.linkedItemId &&
+        l.name.trim().toLowerCase() === it.name.trim().toLowerCase() &&
+        l.category === it.category &&
+        l.date === it.boughtDate
+      );
+      if(match) match.linkedItemId = it.id;
+    });
+    setConnBadge('ok', 'conectado a Supabase');
+    document.getElementById('loading-screen').style.display = 'none';
+    document.getElementById('main-content').style.display = 'block';
+    render();
+  }catch(e){
+    console.error(e);
+    setConnBadge('err', 'sin conexión a Supabase');
+    document.getElementById('loading-screen').textContent =
+      'No se pudo conectar con Supabase. Revisá tu conexión a internet y recargá la página. (' + (e.message || e) + ')';
+  }
+})();
+</script>
+</body>
+</html>
