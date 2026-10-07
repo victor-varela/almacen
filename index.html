@@ -517,14 +517,14 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 // ====== Configuración de Supabase ======
 // Proyecto "Almacen". La anon key es pública por diseño (segura para usar
 // en el frontend) — el control de acceso real lo da Supabase, no esta clave.
 const SUPABASE_URL = 'https://sapaqpyvdzpsiqjnkppz.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNhcGFxcHl2ZHpwc2lxam5rcHB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEwMjY4MzksImV4cCI6MjEwNjYwMjgzOX0.DdGWm5ITnBQTtMplGoAeXQNSC7btO2Nga4LFT68-Ucg';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const CATS = [
   {key:'limpieza', label:'Limpieza'},
@@ -593,11 +593,11 @@ function setConnBadge(status, text){
 // ====== Carga inicial desde Supabase ======
 async function loadState(){
   const [settingsRes, itemsRes, refsRes, historyRes, logRes] = await Promise.all([
-    supabase.from('settings').select('*').eq('id', 1).maybeSingle(),
-    supabase.from('items').select('*').order('created_at', {ascending:true}),
-    supabase.from('price_refs').select('*'),
-    supabase.from('week_history').select('*').order('closed_at', {ascending:true}),
-    supabase.from('purchase_log').select('*').order('purchase_date', {ascending:false})
+    sb.from('settings').select('*').eq('id', 1).maybeSingle(),
+    sb.from('items').select('*').order('created_at', {ascending:true}),
+    sb.from('price_refs').select('*'),
+    sb.from('week_history').select('*').order('closed_at', {ascending:true}),
+    sb.from('purchase_log').select('*').order('purchase_date', {ascending:false})
   ]);
 
   const firstError = [settingsRes, itemsRes, refsRes, historyRes, logRes].find(r => r.error);
@@ -666,11 +666,11 @@ async function logPurchase(item){
   const idx = state.purchaseLog.findIndex(l => l.linkedItemId === item.id);
   if(idx >= 0){
     const row = state.purchaseLog[idx];
-    const {data, error} = await supabase.from('purchase_log').update(payload).eq('id', row.id).select().single();
+    const {data, error} = await sb.from('purchase_log').update(payload).eq('id', row.id).select().single();
     if(error){ showToast('No se pudo actualizar el historial', true); return; }
     state.purchaseLog[idx] = {id:data.id, name:data.item_name, category:data.category, price:Number(data.price), date:isoToDMY(data.purchase_date), place:data.place, linkedItemId:item.id};
   } else {
-    const {data, error} = await supabase.from('purchase_log').insert(payload).select().single();
+    const {data, error} = await sb.from('purchase_log').insert(payload).select().single();
     if(error){ showToast('No se pudo guardar en el historial', true); return; }
     state.purchaseLog.unshift({id:data.id, name:data.item_name, category:data.category, price:Number(data.price), date:isoToDMY(data.purchase_date), place:data.place, linkedItemId:item.id});
   }
@@ -680,7 +680,7 @@ async function removeFromLog(itemId){
   const idx = state.purchaseLog.findIndex(l => l.linkedItemId === itemId);
   if(idx < 0) return;
   const row = state.purchaseLog[idx];
-  const {error} = await supabase.from('purchase_log').delete().eq('id', row.id);
+  const {error} = await sb.from('purchase_log').delete().eq('id', row.id);
   if(error){ showToast('No se pudo borrar del historial', true); return; }
   state.purchaseLog.splice(idx, 1);
 }
@@ -776,7 +776,7 @@ async function toggleItem(id){
   }
   render();
   try{
-    const {error} = await supabase.from('items').update({
+    const {error} = await sb.from('items').update({
       checked: it.checked,
       price: it.checked ? it.price : null,
       bought_date: it.checked ? dmyToISO(it.boughtDate) : null,
@@ -796,7 +796,7 @@ async function setPrice(id, val){
   const num = parseFloat(val);
   it.price = isNaN(num) ? null : num;
   try{
-    const {error} = await supabase.from('items').update({price: it.price}).eq('id', id);
+    const {error} = await sb.from('items').update({price: it.price}).eq('id', id);
     if(error) throw error;
     await logPurchase(it);
   }catch(e){
@@ -809,7 +809,7 @@ async function setPlace(id, val){
   const it = state.items.find(i => i.id === id);
   it.place = val.trim() || null;
   try{
-    const {error} = await supabase.from('items').update({place: it.place}).eq('id', id);
+    const {error} = await sb.from('items').update({place: it.place}).eq('id', id);
     if(error) throw error;
     await logPurchase(it);
   }catch(e){
@@ -820,7 +820,7 @@ async function setPlace(id, val){
 
 async function deleteItem(id){
   try{
-    const {error} = await supabase.from('items').delete().eq('id', id);
+    const {error} = await sb.from('items').delete().eq('id', id);
     if(error) throw error;
     await removeFromLog(id);
     state.items = state.items.filter(i => i.id !== id);
@@ -836,7 +836,7 @@ async function addItemFromRow(btn){
   const cat = row.dataset.cat;
   if(!name) return;
   try{
-    const {data, error} = await supabase.from('items').insert({name, category: cat, checked:false}).select().single();
+    const {data, error} = await sb.from('items').insert({name, category: cat, checked:false}).select().single();
     if(error) throw error;
     state.items.push({id:data.id, name:data.name, category:data.category, checked:false, price:null, boughtDate:null, place:null, note:null, recipe:null});
     render();
@@ -850,7 +850,7 @@ async function updateBudget(){
   const val = parseFloat(document.getElementById('budget-input').value);
   if(isNaN(val) || val <= 0) return;
   try{
-    const {error} = await supabase.from('settings').update({budget: val}).eq('id', 1);
+    const {error} = await sb.from('settings').update({budget: val}).eq('id', 1);
     if(error) throw error;
     state.budget = val;
     render();
@@ -868,26 +868,26 @@ async function closeWeek(){
       .filter(it => it.checked && it.price)
       .map(it => ({product_name: it.name.trim().toLowerCase(), price: it.price, unit: state.priceRefs[it.name.trim().toLowerCase()]?.unit || 'un'}));
     if(refUpserts.length){
-      const {error: refErr} = await supabase.from('price_refs').upsert(refUpserts, {onConflict:'product_name'});
+      const {error: refErr} = await sb.from('price_refs').upsert(refUpserts, {onConflict:'product_name'});
       if(refErr) throw refErr;
       refUpserts.forEach(r => { state.priceRefs[r.product_name] = {price:r.price, unit:r.unit}; });
     }
 
-    const {error: histErr} = await supabase.from('week_history').insert({
+    const {error: histErr} = await sb.from('week_history').insert({
       week_start: state.weekStartISO, spent, budget: state.budget
     });
     if(histErr) throw histErr;
     state.history.push({weekStart: state.weekStart, spent, budget: state.budget});
 
     const newWeekISO = todayISO();
-    const {error: setErr} = await supabase.from('settings').update({week_start: newWeekISO}).eq('id', 1);
+    const {error: setErr} = await sb.from('settings').update({week_start: newWeekISO}).eq('id', 1);
     if(setErr) throw setErr;
     state.weekStart = isoToDMY(newWeekISO);
     state.weekStartISO = newWeekISO;
 
     const checkedIds = state.items.filter(it => it.checked).map(it => it.id);
     if(checkedIds.length){
-      const {error: itemsErr} = await supabase.from('items')
+      const {error: itemsErr} = await sb.from('items')
         .update({checked:false, price:null, bought_date:null, place:null})
         .in('id', checkedIds);
       if(itemsErr) throw itemsErr;
